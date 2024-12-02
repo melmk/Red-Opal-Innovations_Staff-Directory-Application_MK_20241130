@@ -1,35 +1,84 @@
-import { Text, SafeAreaView, StyleSheet } from 'react-native';
+// Imports libraries
+import React, { useState, useEffect, useCallback } from 'react';
+import { Alert, SafeAreaView, StyleSheet, Text, View, TouchableOpacity, Image, ScrollView, Platform, TextInput } from 'react-native';
+import { NavigationContainer } from '@react-navigation/native';
+import { createStackNavigator } from '@react-navigation/stack';
+import styles from './Styles';
 
-// You can import supported modules from npm
-import { Card } from 'react-native-paper';
+// Imports screens
+import BottomButtons from './components/bottomButtons';
+import DirectoryScreen from './screens/DirectoryScreen';
+import StaffDetailsScreen from './screens/StaffDetailsScreen';
+import EditStaffScreen from './screens/EditStaffScreen';
+import AddStaffScreen from './screens/AddStaffScreen';
+import Settings from './screens/Settings';
 
-// or any files within the Snack
-import AssetExample from './components/AssetExample';
+
+const Stack = createStackNavigator();
 
 export default function App() {
   return (
-    <SafeAreaView style={styles.container}>
-      <Text style={styles.paragraph}>
-        Change code in the editor and watch it change on your phone! Save to get a shareable url.
-      </Text>
-      <Card>
-        <AssetExample />
-      </Card>
-    </SafeAreaView>
+    <NavigationContainer>
+      <SafeAreaView style={styles.container}>
+
+        {/* Sets ROI logo in header, see Styles.js for more info on sizing/position */}
+        <View style={styles.headerBar}>
+          <Image source={require('./assets/roi-icon1.png')} style={styles.roiIcon} />
+        </View>
+
+        {/* Sets Navigation Stack*/}
+        <Stack.Navigator>
+
+          {/* Directory page */}
+          <Stack.Screen
+            name="Staff Directory"
+            component={DirectoryScreen}
+            options={{
+              headerLeft: null,
+              headerTitle: 'Staff Directory',
+            }}
+          />
+
+          {/* Details page */}
+          <Stack.Screen
+            name="Staff Details"
+            component={StaffDetailsScreen}
+            options={{
+              headerBackTitleVisible: false,
+            }}
+          />
+
+          {/* Edit details page */}
+          <Stack.Screen
+            name="Edit Staff"
+            component={EditStaffScreen}
+            options={{
+              headerBackTitleVisible: false,
+            }}
+          />
+
+          {/* Add staff page */}
+          <Stack.Screen
+            name="Add Staff"
+            component={AddStaffScreen}
+            options={{
+              headerBackTitleVisible: false,
+            }}
+          />
+
+          {/* Settings page */}
+          <Stack.Screen
+            name="Settings"
+            component={Settings}
+            options={{
+              headerBackTitleVisible: false,
+            }}
+          />
+        </Stack.Navigator>
+
+        {/* Calls bottomButtons.js to populate bottom nav persistent across screens*/}
+        <BottomButtons />
+      </SafeAreaView>
+    </NavigationContainer>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    justifyContent: 'center',
-    backgroundColor: '#ecf0f1',
-    padding: 8,
-  },
-  paragraph: {
-    margin: 24,
-    fontSize: 18,
-    fontWeight: 'bold',
-    textAlign: 'center',
-  },
-});
