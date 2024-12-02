@@ -1,42 +1,94 @@
-import React, { useState, useContext } from 'react';
+import React, { useState } from 'react';
 import { Alert, SafeAreaView, ScrollView, Text, View, TouchableOpacity, TextInput } from 'react-native';
 import { Picker } from '@react-native-picker/picker';
-import { StaffContext } from '../components/StaffContext';
+
 import styles from '../Styles';
 
 export default function EditStaffScreen({ route, navigation }) {
-  const { staff = {} } = route.params;
-  const { id = '', name: initialName = '', department: initialDepartment = 0, address: initialAddress = {} } = staff;
-  const { staffList, setStaffList } = useContext(StaffContext);
+  
+  const departmentMap = {
+    0: 'General',
+    1: 'Information Communications Technology',
+    2: 'Finance',
+    3: 'Marketing',
+    4: 'Human Resources',
+  };
 
-  const [name, setName] = useState(initialName);
-  const [department, setDepartment] = useState(initialDepartment);
-  const [address, setAddress] = useState({
-    street: initialAddress.street || '',
-    city: initialAddress.city || '',
-    state: initialAddress.state || '',
-    zip: initialAddress.zip || '',
-    country: initialAddress.country || '',
-  });
+  const repo = 'melmk/testDataRedOpalInovations';
+  const filePath = 'staffTestData.json';
+  const gitHubToken = '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';
 
-  const handleSave = () => {
-    // Update staff data
+  // Extract staff data passed from previous screen
+  const { staff, fileSha } = route.params;
+
+  // States for editable fields
+  const [id] = useState(staff.id);
+  const [name, setName] = useState(staff.name);
+  const [department, setDepartment] = useState(staff.department);
+  const [address, setAddress] = useState(staff.address);
+
+ const handleSave = async () => {
+  try {
     const updatedStaff = { id, name, department, address };
 
-    // Update the global staff list
-    const updatedStaffList = staffList.map((item) =>
-      item.id === updatedStaff.id ? updatedStaff : item
+    // Fetch the latest file data from GitHub
+    const response = await fetch(`https://api.github.com/repos/${repo}/contents/${filePath}`, {
+      headers: {
+        Authorization: `token ${gitHubToken}`,
+      },
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      console.error('Fetch File Error:', errorData);
+      throw new Error(`Failed to fetch file data: ${errorData.message}`);
+    }
+
+    const data = await response.json();
+    const decodedContent = atob(data.content);
+    const content = JSON.parse(decodedContent);
+
+    // Update staff data
+    const updatedPeople = content.people.map((person) =>
+      person.id === updatedStaff.id ? updatedStaff : person
     );
-    setStaffList(updatedStaffList);
+
+    const updatedContent = btoa(JSON.stringify({ ...content, people: updatedPeople }));
+
+    // Save updated content back to GitHub
+    const putResponse = await fetch(`https://api.github.com/repos/${repo}/contents/${filePath}`, {
+      method: 'PUT',
+      headers: {
+        Authorization: `token ${gitHubToken}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        message: `Update staff record for ${name}`,
+        sha: data.sha, // Use fetched SHA
+        content: updatedContent,
+      }),
+    });
+
+    if (!putResponse.ok) {
+      const putErrorData = await putResponse.json();
+      console.error('PUT Request Error:', putErrorData);
+      throw new Error(`Failed to save file: ${putErrorData.message}`);
+    }
 
     Alert.alert('Success', 'Staff details updated successfully!');
-    navigation.navigate('Staff Details', { staff: updatedStaff });
-  };
+
+    // Navigate back to StaffDetailsScreen with updated details
+    navigation.navigate('Staff Details', { updatedStaff });
+  } catch (error) {
+    console.error('Save Error:', error);
+    Alert.alert('Error', error.message);
+  }
+};
 
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView contentContainerStyle={styles.editContainer}>
-        {/* ID - Not Editable */}
+        {/* ID - not editable */}
         <View style={styles.tile}>
           <Text style={styles.labelText}>ID - cannot edit</Text>
           <Text style={[styles.input, { backgroundColor: '#f0f0f0', color: '#555' }]}>
@@ -63,33 +115,66 @@ export default function EditStaffScreen({ route, navigation }) {
             onValueChange={(itemValue) => setDepartment(itemValue)}
             style={styles.picker}
           >
-            {Object.entries({
-              0: 'General',
-              1: 'Information Communications Technology',
-              2: 'Finance',
-              3: 'Marketing',
-              4: 'Human Resources',
-            }).map(([key, value]) => (
+            {Object.entries(departmentMap).map(([key, value]) => (
               <Picker.Item key={key} label={value} value={Number(key)} />
             ))}
           </Picker>
         </View>
 
-        {/* Address Fields */}
-        {['Street', 'City', 'State', 'Zip Code', 'Country'].map((field) => {
-          const fieldKey = field.toLowerCase().replace(' ', '');
-          return (
-            <View style={styles.tile} key={field}>
-              <Text style={styles.labelText}>{field}</Text>
-              <TextInput
-                style={styles.input}
-                value={address[fieldKey] || ''}
-                onChangeText={(text) => setAddress({ ...address, [fieldKey]: text })}
-                placeholder={`Enter ${field}`}
-              />
-            </View>
-          );
-        })}
+        {/* Address Street */}
+        <View style={styles.tile}>
+          <Text style={styles.labelText}>Street</Text>
+          <TextInput
+            style={styles.input}
+            value={address.street}
+            onChangeText={(text) => setAddress({ ...address, street: text })}
+            placeholder="Enter Street Address"
+          />
+        </View>
+
+        {/* Address City */}
+        <View style={styles.tile}>
+          <Text style={styles.labelText}>City</Text>
+          <TextInput
+            style={styles.input}
+            value={address.city}
+            onChangeText={(text) => setAddress({ ...address, city: text })}
+            placeholder="Enter City"
+          />
+        </View>
+
+        {/* Address State */}
+        <View style={styles.tile}>
+          <Text style={styles.labelText}>State</Text>
+          <TextInput
+            style={styles.input}
+            value={address.state}
+            onChangeText={(text) => setAddress({ ...address, state: text })}
+            placeholder="Enter State"
+          />
+        </View>
+
+        {/* Address ZIP */}
+        <View style={styles.tile}>
+          <Text style={styles.labelText}>Zip Code</Text>
+          <TextInput
+            style={styles.input}
+            value={address.zip}
+            onChangeText={(text) => setAddress({ ...address, zip: text })}
+            placeholder="Enter Zip Code"
+          />
+        </View>
+
+        {/* Address Country */}
+        <View style={styles.tile}>
+          <Text style={styles.labelText}>Country</Text>
+          <TextInput
+            style={styles.input}
+            value={address.country}
+            onChangeText={(text) => setAddress({ ...address, country: text })}
+            placeholder="Enter Country"
+          />
+        </View>
       </ScrollView>
 
       {/* Save Button */}
